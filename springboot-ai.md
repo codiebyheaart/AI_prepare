@@ -1,561 +1,410 @@
-# Spring Boot + AI Integration — Interview Guide
+# 🤖 Spring Boot + AI — Real-World Integration Guide
 
-> Real-world examples in **Banking, Trading & Finance** domains
-
----
-
-## 1. Spring AI Framework Overview
-
-Spring AI provides a unified API to integrate LLMs into Spring Boot apps.
-
-```xml
-<!-- pom.xml -->
-<dependency>
-    <groupId>org.springframework.ai</groupId>
-    <artifactId>spring-ai-openai-spring-boot-starter</artifactId>
-</dependency>
-<dependency>
-    <groupId>org.springframework.ai</groupId>
-    <artifactId>spring-ai-pgvector-store-spring-boot-starter</artifactId>
-</dependency>
-```
-
-```yaml
-# application.yml
-spring:
-  ai:
-    openai:
-      api-key: ${OPENAI_API_KEY}
-      chat:
-        options:
-          model: gpt-4o
-          temperature: 0.3
-    vectorstore:
-      pgvector:
-        dimensions: 1536
-```
+> **For:** Senior Java Developer transitioning into AI-powered backend systems
+> **Domain Focus:** Banking, Trading, Finance
 
 ---
 
-## 2. Basic Chat Completion
+## 1. Why Spring Boot + AI?
 
-```java
-@RestController
-@RequestMapping("/api/ai")
-public class AiChatController {
+Spring Boot is the **backbone** — it handles APIs, security, databases, and business logic.
+AI is the **brain** — it understands data, predicts outcomes, and generates intelligent responses.
 
-    private final ChatClient chatClient;
+Together they power modern systems like:
+- **Fraud detection** in banking
+- **Algorithmic trading signals** in stock platforms
+- **Customer support chatbots** in fintech apps
+- **Document analysis** for loan processing
+- **Risk scoring** for insurance
 
-    public AiChatController(ChatClient.Builder builder) {
-        this.chatClient = builder
-            .defaultSystem("You are a senior financial advisor. Be concise and data-driven.")
-            .build();
-    }
+---
 
-    @PostMapping("/chat")
-    public String chat(@RequestBody String userMessage) {
-        return chatClient.prompt()
-            .user(userMessage)
-            .call()
-            .content();
-    }
+## 2. The AI Integration Landscape
 
-    // Streaming response
-    @GetMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<String> chatStream(@RequestParam String query) {
-        return chatClient.prompt()
-            .user(query)
-            .stream()
-            .content();
-    }
-}
+```
+[Spring Boot App]
+      │
+      ├── REST API Layer (Controllers)
+      │
+      ├── AI Integration Layer
+      │     ├── LLM Calls (OpenAI, Gemini, Claude)
+      │     ├── Vector DB Queries (Pinecone, Weaviate, pgvector)
+      │     ├── Embedding Generation
+      │     └── LangChain4j / Spring AI
+      │
+      ├── Service Layer (Business Logic)
+      │
+      └── Data Layer (PostgreSQL, MongoDB, Redis)
 ```
 
 ---
 
-## 3. Structured Output (JSON from LLM)
+## 3. Spring AI — Official Spring Boot AI Framework
 
-```java
-// Define response structure
-public record StockAnalysis(
-    String ticker,
-    String recommendation,  // BUY, SELL, HOLD
-    double targetPrice,
-    String reasoning,
-    List<String> risks
-) {}
+**Spring AI** is the Spring team's official way to integrate AI into Spring Boot apps.
 
-@Service
-public class StockAnalysisService {
+Think of it as **Spring Data JPA but for AI** — it gives you a unified API to talk to different AI providers.
 
-    private final ChatClient chatClient;
+### Key Components of Spring AI
 
-    public StockAnalysis analyzeStock(String ticker, String financialData) {
-        return chatClient.prompt()
-            .system("Analyze stocks and return structured recommendations.")
-            .user(u -> u.text("""
-                Analyze {ticker} based on this financial data:
-                {data}
-                Provide recommendation, target price, reasoning, and risks.
-                """)
-                .param("ticker", ticker)
-                .param("data", financialData))
-            .call()
-            .entity(StockAnalysis.class);  // Auto-parses to Java object
-    }
-}
+| Component | Purpose |
+|-----------|---------|
+| `ChatClient` | Talk to LLMs (OpenAI, Gemini, etc.) |
+| `EmbeddingClient` | Convert text to vectors |
+| `VectorStore` | Store & search embeddings |
+| `PromptTemplate` | Create dynamic prompts |
+| `DocumentReader` | Read PDFs, web pages, etc. |
+| `RAGChain` | Retrieval-Augmented Generation pipeline |
+
+### Supported AI Providers (via Spring AI)
+- OpenAI (GPT-4, GPT-4o)
+- Google Vertex AI / Gemini
+- Anthropic Claude
+- Azure OpenAI
+- Ollama (local models)
+- Mistral AI
+
+---
+
+## 4. LangChain4j — Java's LangChain
+
+**LangChain4j** is the Java equivalent of Python's LangChain. It lets you build AI chains, agents, and RAG pipelines in Java.
+
+### Key Abstractions
+
+| Abstraction | What it does |
+|-------------|-------------|
+| `AiServices` | Declarative AI service (like Spring Data repos) |
+| `ChatLanguageModel` | Send/receive chat messages |
+| `EmbeddingModel` | Generate vector embeddings |
+| `EmbeddingStore` | Store and query vectors |
+| `Retriever` | Fetch relevant docs for RAG |
+| `Tool` | Function calling — let AI call your Java methods |
+| `Agent` | Autonomous AI that decides what tools to use |
+
+---
+
+## 5. Real-World Use Case: Banking Fraud Detection
+
+### Architecture Flow
+
+```
+[Transaction Request]
+        ↓
+[Spring Boot API]
+        ↓
+[Feature Extraction Service]
+  → Amount, time, location, merchant category, user history
+        ↓
+[AI Risk Scoring Service]
+  → Sends features to ML model or LLM
+  → Returns risk score (0.0 - 1.0)
+        ↓
+[Decision Engine]
+  → Score < 0.3 → Approve
+  → Score 0.3-0.7 → Flag for review
+  → Score > 0.7 → Block + Alert
+        ↓
+[Notification Service]
+  → Email/SMS to customer
+  → Alert to fraud team
+```
+
+### AI Role in This System
+- **Anomaly detection:** "This transaction is unlike the user's normal pattern"
+- **Pattern recognition:** "This sequence matches known fraud patterns"
+- **Explainability:** "Transaction flagged because: unusual location + high amount + new device"
+
+---
+
+## 6. Real-World Use Case: Trading Platform
+
+### AI Features in a Trading App
+
+| Feature | AI Technique | Description |
+|---------|-------------|-------------|
+| Market Sentiment | NLP + LLM | Analyze news/tweets for bullish/bearish signals |
+| Price Prediction | Time-series ML | Predict short-term price movements |
+| Trade Recommendations | RAG + LLM | "Based on current market, consider these stocks" |
+| Risk Assessment | ML Classification | Portfolio risk scoring |
+| Earnings Analysis | Document AI | Parse earnings reports, extract key metrics |
+| Chatbot Assistant | LLM + Tool use | "Show me Nifty 50 performance this week" |
+
+### Trading AI Architecture
+
+```
+[Market Data Feeds] ──► [Data Ingestion Service]
+                                │
+                         [Vector DB Storage]
+                       (embeddings of reports,
+                        news, market data)
+                                │
+[User Query] ──► [Spring Boot API]
+                        │
+               [RAG Pipeline]
+               ├── Query → Embedding
+               ├── Vector Search (find relevant market data)
+               ├── Context Assembly
+               └── LLM → Generate Trading Insight
+                        │
+               [Response to User]
 ```
 
 ---
 
-## 4. Function Calling / Tool Use
+## 7. Real-World Use Case: Loan Processing
 
-LLMs can invoke your Java methods to fetch real-time data.
+### Intelligent Document Processing Pipeline
 
-```java
-// Define tools the LLM can call
-@Service
-public class TradingTools {
-
-    @Tool(description = "Get current stock price for a given ticker symbol")
-    public StockPrice getCurrentPrice(@ToolParam("Stock ticker e.g. AAPL") String ticker) {
-        // Call real API (Zerodha, Alpha Vantage, etc.)
-        return stockApiClient.getQuote(ticker);
-    }
-
-    @Tool(description = "Get account portfolio holdings")
-    public List<Holding> getPortfolio(@ToolParam("Account ID") String accountId) {
-        return portfolioRepository.findByAccountId(accountId);
-    }
-
-    @Tool(description = "Place a stock order")
-    public OrderConfirmation placeOrder(
-            @ToolParam("Ticker") String ticker,
-            @ToolParam("BUY or SELL") String side,
-            @ToolParam("Number of shares") int quantity) {
-        return tradingService.executeOrder(ticker, side, quantity);
-    }
-}
-
-// Use tools with ChatClient
-@Service
-public class TradingAssistant {
-
-    private final ChatClient chatClient;
-    private final TradingTools tradingTools;
-
-    public String chat(String userQuery) {
-        return chatClient.prompt()
-            .system("""
-                You are a trading assistant. Use available tools to fetch
-                real-time data before making recommendations. Always confirm
-                before placing orders.
-                """)
-            .user(userQuery)
-            .tools(tradingTools)
-            .call()
-            .content();
-    }
-}
+```
+[Customer uploads documents]
+        ↓
+[Document Service] → PDF, Images, Bank Statements
+        ↓
+[OCR / Document AI]
+  → Extract text from scanned docs
+        ↓
+[NLP Entity Extraction]
+  → Income, Employment, Liabilities
+        ↓
+[Risk Scoring Model]
+  → Credit score prediction
+        ↓
+[Decision Engine]
+  → Approve / Reject / Manual Review
+        ↓
+[LLM Report Generator]
+  → Auto-generates loan officer summary report
 ```
 
 ---
 
-## 5. RAG Pipeline in Spring Boot (Banking Document Q&A)
+## 8. Prompt Engineering in Spring Boot
 
+A **prompt template** is a dynamic text template that you fill with real data before sending to an LLM.
+
+### Best Practices
+
+**System Prompt (personality & rules):**
 ```
-┌──────────┐    ┌──────────────┐    ┌────────────┐    ┌─────────┐
-│ PDF/Docs │───▶│ Text Splitter│───▶│ Embeddings │───▶│ PGVector│
-└──────────┘    └──────────────┘    └────────────┘    └─────────┘
-                                                           │
-┌──────────┐    ┌──────────────┐    ┌────────────┐         │
-│ Response │◀───│   LLM Call   │◀───│  Context   │◀────────┘
-└──────────┘    └──────────────┘    └────────────┘
-```
-
-### Step 1: Ingest Documents
-
-```java
-@Service
-public class DocumentIngestionService {
-
-    private final VectorStore vectorStore;
-    private final TokenTextSplitter textSplitter;
-
-    public void ingestPdf(Resource pdfResource) {
-        // Parse PDF
-        var reader = new PagePdfDocumentReader(pdfResource);
-        List<Document> documents = reader.read();
-
-        // Split into chunks
-        var splitter = new TokenTextSplitter(800, 200, 5, 10000, true);
-        List<Document> chunks = splitter.apply(documents);
-
-        // Add metadata
-        chunks.forEach(doc -> {
-            doc.getMetadata().put("source", pdfResource.getFilename());
-            doc.getMetadata().put("type", "banking-policy");
-        });
-
-        // Store embeddings in vector DB
-        vectorStore.add(chunks);
-    }
-}
+You are a senior financial analyst assistant for ABC Bank.
+You provide professional, data-backed analysis.
+Never provide investment advice. Always cite sources.
 ```
 
-### Step 2: Query with RAG
+**User Prompt Template:**
+```
+Analyze the following stock data for {stockSymbol} from {startDate} to {endDate}:
 
-```java
-@Service
-public class BankingQAService {
+Data: {marketData}
 
-    private final ChatClient chatClient;
-    private final VectorStore vectorStore;
-
-    public String askQuestion(String question) {
-        // Retrieve relevant documents
-        var advisor = QuestionAnswerAdvisor.builder(vectorStore)
-            .searchRequest(SearchRequest.builder()
-                .topK(5)
-                .similarityThreshold(0.7)
-                .filterExpression("type == 'banking-policy'")
-                .build())
-            .build();
-
-        return chatClient.prompt()
-            .system("""
-                You are a banking compliance assistant. Answer questions
-                ONLY based on the provided context. If unsure, say so.
-                Cite the source document.
-                """)
-            .user(question)
-            .advisors(advisor)
-            .call()
-            .content();
-    }
-}
+Provide: 1) Price trend summary 2) Key support/resistance 3) Volume analysis
 ```
 
-### Step 3: REST Endpoint
+### Prompt Patterns Used in Finance
 
-```java
-@RestController
-@RequestMapping("/api/banking")
-public class BankingController {
+| Pattern | Use Case |
+|---------|---------|
+| Zero-shot | Simple Q&A, classification |
+| Few-shot | With examples — for complex formatting |
+| Chain of Thought | Step-by-step reasoning for calculations |
+| ReAct | Think + Act pattern for trading agents |
+| Self-Consistency | Multiple paths → majority answer for risk |
 
-    private final DocumentIngestionService ingestionService;
-    private final BankingQAService qaService;
+---
 
-    @PostMapping("/ingest")
-    public ResponseEntity<String> ingest(@RequestParam MultipartFile file) {
-        ingestionService.ingestPdf(file.getResource());
-        return ResponseEntity.ok("Document ingested: " + file.getOriginalFilename());
-    }
+## 9. RAG (Retrieval-Augmented Generation) in Banking
 
-    @PostMapping("/ask")
-    public ResponseEntity<String> ask(@RequestBody String question) {
-        return ResponseEntity.ok(qaService.askQuestion(question));
-    }
-}
+RAG = Giving the LLM access to **your own data** at query time.
+
+### Why RAG in Banking?
+- LLMs don't know your proprietary data (customer portfolios, internal policies)
+- You can't send all data in one prompt (token limits)
+- RAG retrieves only **relevant** chunks at query time
+
+### RAG Flow in a Bank
+
+```
+[Regulatory Documents, Policy PDFs, RBI Guidelines]
+                    ↓
+         [Chunk into paragraphs]
+                    ↓
+         [Generate Embeddings]
+                    ↓
+         [Store in Vector DB] (pgvector / Pinecone)
+
+---------- At Query Time ----------
+
+[User: "What is the KYC requirement for NRI accounts?"]
+                    ↓
+         [Embed the query]
+                    ↓
+         [Similarity Search in Vector DB]
+         → Returns top 5 relevant policy chunks
+                    ↓
+         [Assemble Prompt: Query + Context]
+                    ↓
+         [Send to LLM] → Precise, grounded answer
 ```
 
 ---
 
-## 6. Embedding Models & Vector Stores
+## 10. Tool Calling / Function Calling
 
-```java
-// Using different embedding models
-@Configuration
-public class EmbeddingConfig {
+LLMs can **call your Java functions** to get real-time data.
 
-    // OpenAI embeddings
-    @Bean
-    @Profile("openai")
-    public EmbeddingModel openAiEmbedding() {
-        return new OpenAiEmbeddingModel(
-            new OpenAiApi(apiKey),
-            OpenAiEmbeddingOptions.builder()
-                .model("text-embedding-3-small")
-                .build());
-    }
+### Example: Trading Chatbot Tools
 
-    // Vector store with PGVector
-    @Bean
-    public VectorStore vectorStore(EmbeddingModel embeddingModel, JdbcTemplate jdbc) {
-        return PgVectorStore.builder(jdbc, embeddingModel)
-            .dimensions(1536)
-            .distanceType(PgVectorStore.PgDistanceType.COSINE_DISTANCE)
-            .indexType(PgVectorStore.PgIndexType.HNSW)
-            .build();
-    }
-}
-
-// Similarity search
-List<Document> results = vectorStore.similaritySearch(
-    SearchRequest.builder()
-        .query("What is the loan approval process?")
-        .topK(5)
-        .similarityThreshold(0.75)
-        .build()
-);
 ```
+User: "What is the current price of RELIANCE?"
+         ↓
+LLM decides to call: getStockPrice("RELIANCE")
+         ↓
+Spring Boot calls Zerodha/NSE API → Returns ₹2,847.50
+         ↓
+LLM uses the data to respond:
+"RELIANCE is currently trading at ₹2,847.50, up 1.2% today."
+```
+
+### Available Tools You Can Register
+- `getStockPrice(symbol)` → Real-time price
+- `getPortfolio(userId)` → User's holdings
+- `getNewsHeadlines(topic)` → Latest market news
+- `calculateRisk(portfolio)` → Risk score
+- `placeOrder(symbol, qty, type)` → Execute trade (with approval)
 
 ---
 
-## 7. Multi-Model Support (OpenAI + Gemini + Claude)
+## 11. Streaming Responses
 
-```java
-@Configuration
-public class MultiModelConfig {
+For chatbot UX, you stream the AI response token by token (like ChatGPT typing effect).
 
-    @Bean("openai")
-    public ChatClient openAiClient(OpenAiChatModel model) {
-        return ChatClient.builder(model)
-            .defaultSystem("You are a financial analyst.")
-            .build();
-    }
+Spring AI and LangChain4j both support **reactive streaming** — the response flows back to the frontend character by character.
 
-    @Bean("gemini")
-    public ChatClient geminiClient(VertexAiGeminiChatModel model) {
-        return ChatClient.builder(model).build();
-    }
-
-    @Bean("claude")
-    public ChatClient claudeClient(AnthropicChatModel model) {
-        return ChatClient.builder(model).build();
-    }
-}
-
-// Service that routes to different models
-@Service
-public class MultiModelService {
-
-    private final Map<String, ChatClient> clients;
-
-    public String query(String model, String prompt) {
-        ChatClient client = clients.get(model);
-        if (client == null) throw new IllegalArgumentException("Unknown model: " + model);
-        return client.prompt().user(prompt).call().content();
-    }
-
-    // Consensus approach — ask multiple models
-    public ConsensusResult getConsensus(String question) {
-        var futures = clients.entrySet().stream()
-            .map(e -> CompletableFuture.supplyAsync(() ->
-                Map.entry(e.getKey(), e.getValue().prompt().user(question).call().content())))
-            .toList();
-
-        var results = futures.stream()
-            .map(CompletableFuture::join)
-            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-
-        return new ConsensusResult(results);
-    }
-}
-```
+**Use cases:**
+- Chatbot responses feel alive and fast
+- Long financial reports generated progressively
+- Real-time trade analysis narration
 
 ---
 
-## 8. AI Fraud Detection (Banking Example)
+## 12. AI Memory & Context Management
 
-```java
-@Service
-public class FraudDetectionService {
+### The Problem
+LLMs are **stateless** — they don't remember previous messages unless you send them.
 
-    private final ChatClient chatClient;
-    private final TransactionRepository txnRepo;
+### Solutions in Spring Boot
 
-    public FraudAlert analyzeTransaction(Transaction txn) {
-        // Get customer history
-        List<Transaction> history = txnRepo.findRecentByCustomer(
-            txn.getCustomerId(), 30); // last 30 days
-
-        String historyJson = objectMapper.writeValueAsString(history);
-
-        return chatClient.prompt()
-            .system("""
-                You are a fraud detection system. Analyze transactions for:
-                1. Unusual amounts compared to history
-                2. Geographic anomalies
-                3. Velocity checks (too many transactions)
-                4. Time-of-day anomalies
-                Return a risk score (0-100) and explanation.
-                """)
-            .user(u -> u.text("""
-                Current transaction: {txn}
-                Customer 30-day history: {history}
-                """)
-                .param("txn", txn.toString())
-                .param("history", historyJson))
-            .call()
-            .entity(FraudAlert.class);
-    }
-}
-
-public record FraudAlert(
-    int riskScore,
-    String riskLevel,      // LOW, MEDIUM, HIGH, CRITICAL
-    List<String> flags,
-    String recommendation  // APPROVE, REVIEW, BLOCK
-) {}
-```
+| Strategy | How it works | Best for |
+|----------|-------------|----------|
+| In-Memory | Store last N messages in app memory | Simple chatbots |
+| Redis/DB | Persist conversation history | Multi-session apps |
+| Summarization | Summarize old context to save tokens | Long conversations |
+| Vector Memory | Store past interactions as embeddings | Personalized AI |
 
 ---
 
-## 9. AI Trading Assistant (Stock Market Example)
+## 13. AI Observability — Monitoring AI in Production
 
-```java
-@Service
-public class TradingAdvisorService {
+### What to Monitor
+- **Latency:** How long does each LLM call take?
+- **Token Usage:** How many tokens consumed? (Cost tracking)
+- **Error Rate:** API failures, timeouts
+- **Response Quality:** Hallucination detection, confidence scores
+- **Cost per Request:** OpenAI API cost tracking
 
-    private final ChatClient chatClient;
-    private final MarketDataService marketData;
-
-    public TradingAdvice getAdvice(String ticker) {
-        // Fetch real data
-        StockQuote quote = marketData.getQuote(ticker);
-        List<HistoricalPrice> prices = marketData.getHistory(ticker, 90);
-        FinancialStatement financials = marketData.getFinancials(ticker);
-
-        return chatClient.prompt()
-            .system("""
-                You are a quantitative analyst. Provide trading advice based on:
-                - Technical analysis (moving averages, RSI, MACD)
-                - Fundamental analysis (P/E, revenue growth, margins)
-                - Risk assessment
-                Always include disclaimers.
-                """)
-            .user(u -> u.text("""
-                Ticker: {ticker}
-                Current Price: {price}
-                90-day price history: {history}
-                Financials: {financials}
-                Provide BUY/SELL/HOLD with reasoning.
-                """)
-                .param("ticker", ticker)
-                .param("price", quote.toString())
-                .param("history", prices.toString())
-                .param("financials", financials.toString()))
-            .call()
-            .entity(TradingAdvice.class);
-    }
-}
-```
+### Tools
+| Tool | Purpose |
+|------|---------|
+| LangSmith | LLM trace & debug |
+| Spring Boot Actuator | Health + metrics |
+| Micrometer + Prometheus | Metrics collection |
+| Grafana | Dashboard visualization |
+| OpenTelemetry | Distributed tracing |
 
 ---
 
-## 10. Prompt Engineering in Java
+## 14. Security & Compliance in AI-Powered Finance Apps
 
-```java
-@Component
-public class PromptTemplateManager {
-
-    // Load from file
-    @Value("classpath:/prompts/trading-analysis.st")
-    private Resource tradingPrompt;
-
-    // Parameterized prompts
-    public Prompt buildAnalysisPrompt(String ticker, String data) {
-        PromptTemplate template = new PromptTemplate(tradingPrompt);
-        return template.create(Map.of(
-            "ticker", ticker,
-            "data", data,
-            "date", LocalDate.now().toString()
-        ));
-    }
-}
-
-// System prompt with guardrails
-String SYSTEM_PROMPT = """
-    You are a licensed financial advisor AI assistant.
-
-    RULES:
-    1. Never provide guaranteed returns
-    2. Always include risk disclaimers
-    3. Base recommendations on provided data only
-    4. If data is insufficient, ask for more information
-    5. Follow SEC and FINRA compliance guidelines
-
-    OUTPUT FORMAT: Always respond in structured JSON matching the requested schema.
-    """;
-```
-
----
-
-## 11. Token Management & Cost Optimization
-
-```java
-@Service
-public class TokenManagementService {
-
-    private final Counter tokenCounter;
-    private final DistributionSummary costTracker;
-
-    public TokenManagementService(MeterRegistry registry) {
-        this.tokenCounter = Counter.builder("ai.tokens.total")
-            .tag("type", "all").register(registry);
-        this.costTracker = DistributionSummary.builder("ai.cost.usd")
-            .register(registry);
-    }
-
-    // Middleware to track usage
-    public ChatResponse trackAndCall(ChatClient client, Prompt prompt) {
-        ChatResponse response = client.prompt(prompt).call().chatResponse();
-
-        Usage usage = response.getMetadata().getUsage();
-        long totalTokens = usage.getTotalTokens();
-
-        tokenCounter.increment(totalTokens);
-        double cost = calculateCost(usage);
-        costTracker.record(cost);
-
-        log.info("Tokens used: {} (prompt: {}, completion: {}), Cost: ${}",
-            totalTokens, usage.getPromptTokens(),
-            usage.getCompletionTokens(), cost);
-
-        return response;
-    }
-
-    // Cost optimization strategies
-    // 1. Use cheaper models for simple tasks
-    // 2. Cache frequent queries
-    // 3. Truncate context when too long
-    // 4. Use streaming for better UX without more cost
-    // 5. Batch similar requests
-}
-```
-
----
-
-## 12. Production Deployment Checklist
+### Key Concerns
 
 | Concern | Solution |
-|---------|----------|
-| API key security | Vault / AWS Secrets Manager, never in code |
-| Rate limiting | Resilience4j `@RateLimiter` on AI endpoints |
-| Cost control | Token budgets, model routing (cheap → expensive) |
-| Latency | Streaming, async, caching frequent queries |
-| Monitoring | Micrometer metrics for tokens, cost, latency |
-| Fallback | Circuit breaker with fallback to simpler model |
-| Content safety | Input/output filtering, PII redaction |
-| Testing | Mock AI responses in tests, golden file testing |
-| Scalability | Queue-based processing for heavy AI tasks |
+|---------|---------|
+| Data Privacy | Never send PII to external LLMs; use on-premise models |
+| Prompt Injection | Sanitize user input; use system prompt guards |
+| Model Hallucinations | Validate AI output before acting on it |
+| Audit Trail | Log all AI decisions for regulatory compliance |
+| Rate Limiting | Prevent abuse of AI endpoints |
+| Role-Based AI Access | Different AI features for different user roles |
 
-```java
-// Rate limiting AI calls
-@CircuitBreaker(name = "aiService", fallbackMethod = "aiFallback")
-@RateLimiter(name = "aiService")
-@Retry(name = "aiService")
-public String callAI(String prompt) {
-    return chatClient.prompt().user(prompt).call().content();
-}
+---
 
-public String aiFallback(String prompt, Throwable t) {
-    log.warn("AI service unavailable, using cached/fallback response", t);
-    return cachedResponseService.getBestMatch(prompt);
-}
+## 15. On-Premise AI with Ollama
+
+For sensitive banking data, you can run **local LLMs** using Ollama with Spring Boot:
+
+- No data leaves your servers
+- Models: Llama 3, Mistral, Phi-3, Gemma
+- Trade-off: Slower, less capable than GPT-4, but fully private
+- Perfect for: Internal bank tools, compliance-sensitive operations
+
+---
+
+## 16. AI Integration Architecture — Full Picture
+
+```
+┌─────────────────────────────────────────────────┐
+│              SPRING BOOT APPLICATION              │
+├─────────────────────────────────────────────────┤
+│  REST API Layer (Spring MVC / WebFlux)           │
+│  WebSocket (Real-time streaming)                 │
+├─────────────────────────────────────────────────┤
+│  AI Orchestration Layer                          │
+│  ├── Spring AI / LangChain4j                     │
+│  ├── Prompt Templates                            │
+│  ├── RAG Pipeline                                │
+│  └── Agent Framework                             │
+├─────────────────────────────────────────────────┤
+│  Integration Layer                               │
+│  ├── OpenAI / Gemini / Claude (LLM APIs)         │
+│  ├── Vector Store (pgvector / Pinecone)          │
+│  ├── Kafka (Event streaming)                     │
+│  └── External APIs (Zerodha, Bloomberg, RBI)    │
+├─────────────────────────────────────────────────┤
+│  Data Layer                                      │
+│  ├── PostgreSQL (Relational + pgvector)          │
+│  ├── Redis (Cache + Session)                     │
+│  └── S3 / Blob (Document storage)               │
+└─────────────────────────────────────────────────┘
 ```
 
 ---
 
-*Next: `springboot-cloud.md` →*
+## 17. Interview Talking Points
+
+- **"How do you integrate AI in a Spring Boot app?"**
+  → Spring AI or LangChain4j, configure provider (OpenAI/Gemini), use ChatClient/AiServices, build RAG for domain knowledge
+
+- **"How do you handle LLM costs?"**
+  → Token monitoring with Micrometer, response caching with Redis, model selection based on task complexity
+
+- **"How do you ensure AI accuracy in a banking app?"**
+  → RAG with verified sources, output validation layer, human-in-the-loop for critical decisions, audit logging
+
+- **"What's the biggest challenge with LLMs in production?"**
+  → Hallucinations, latency, cost, token limits, prompt injection, and keeping context within limits
+
+---
+
+## Summary
+
+Spring Boot + AI is a powerful combination for building intelligent financial applications. The key pillars are:
+
+1. **Spring AI / LangChain4j** → Java-native AI integration
+2. **RAG** → Ground LLM responses in your real data
+3. **Tool Calling** → Let AI interact with live systems
+4. **Streaming** → Better UX for AI responses
+5. **Security & Compliance** → Non-negotiable in finance
+6. **Observability** → Monitor AI just like any other service
+
+> 💡 **Interview Gold:** "I've built AI features using Spring AI with RAG pipeline backed by pgvector, integrated with OpenAI GPT-4, with full token tracking and audit logging for compliance."
