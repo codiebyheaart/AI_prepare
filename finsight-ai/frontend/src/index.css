@@ -1,0 +1,41 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body { @apply bg-dark-900 text-white; }
+  * { @apply border-dark-border; }
+}
+
+@layer components {
+  .card { @apply bg-dark-card rounded-2xl border border-dark-border p-6; }
+  .card-sm { @apply bg-dark-card rounded-xl border border-dark-border p-4; }
+  .btn-primary { @apply bg-brand-600 hover:bg-brand-500 text-white font-semibold py-2.5 px-5 rounded-xl transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed; }
+  .btn-ghost { @apply text-slate-400 hover:text-white hover:bg-white/5 font-medium py-2 px-4 rounded-xl transition-all duration-200; }
+  .input { @apply bg-dark-850 border border-dark-border text-white rounded-xl px-4 py-3 w-full focus:outline-none focus:ring-2 focus:ring-brand-500 placeholder-slate-500 transition-all duration-200; }
+  .badge-up { @apply text-success text-sm font-semibold; }
+  .badge-down { @apply text-danger text-sm font-semibold; }
+  .tag { @apply text-xs font-medium px-2 py-0.5 rounded-full; }
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { @apply bg-dark-border rounded-full; }
+::-webkit-scrollbar-thumb:hover { @apply bg-slate-600; }
+
+/* Chat message streaming dot */
+.typing-dot {
+  display: inline-block;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #60a5fa;
+  animation: typingBounce 1.2s infinite ease-in-out;
+}
+.typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes typingBounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+  30% { transform: translateY(-6px); opacity: 1; }
+}

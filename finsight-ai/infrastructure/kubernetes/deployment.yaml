@@ -1,0 +1,161 @@
+---
+# Backend Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: finsight-backend
+  namespace: finsight
+  labels:
+    app: finsight-backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: finsight-backend
+  template:
+    metadata:
+      labels:
+        app: finsight-backend
+    spec:
+      containers:
+        - name: backend
+          image: ghcr.io/your-org/finsight-backend:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: docker
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: finsight-secrets
+                  key: openai-api-key
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: finsight-secrets
+                  key: jwt-secret
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "1Gi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8080
+            initialDelaySeconds: 45
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: finsight-backend
+  namespace: finsight
+spec:
+  selector:
+    app: finsight-backend
+  ports:
+    - port: 8080
+      targetPort: 8080
+---
+# Frontend Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: finsight-frontend
+  namespace: finsight
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: finsight-frontend
+  template:
+    metadata:
+      labels:
+        app: finsight-frontend
+    spec:
+      containers:
+        - name: frontend
+          image: ghcr.io/your-org/finsight-frontend:latest
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "128Mi"
+              cpu: "100m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: finsight-frontend
+  namespace: finsight
+spec:
+  selector:
+    app: finsight-frontend
+  ports:
+    - port: 80
+      targetPort: 80
+---
+# Ingress
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: finsight-ingress
+  namespace: finsight
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:ap-south-1:ACCOUNT:certificate/CERT-ID
+spec:
+  rules:
+    - host: finsight.yourdomain.com
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: finsight-backend
+                port:
+                  number: 8080
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: finsight-frontend
+                port:
+                  number: 80
+---
+# HPA — Auto-scale backend on CPU
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: finsight-backend-hpa
+  namespace: finsight
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: finsight-backend
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
